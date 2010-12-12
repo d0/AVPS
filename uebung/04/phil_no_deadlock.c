@@ -1,0 +1,95 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <time.h>
+
+#define NUM_PHIL 5
+#define MAX_THINK 5
+#define MAX_EAT 5
+#define TIME_TO_RUN 20
+
+static pthread_t phil[NUM_PHIL];
+static pthread_mutex_t forks[NUM_PHIL];
+
+short timeout = 1;
+
+void eat(int tid) {
+    int left = tid, right = (tid + 1) % NUM_PHIL;
+    int r = 0;
+    
+    /* Pick up left fork */
+    printf("Philosopher %d waiting for fork %d\n", tid, left);
+    pthread_mutex_lock(&forks[left]);
+    
+    /* Try to pick up right fork. If you don't succeed put down left fork again */
+    if (pthread_mutex_trylock(&forks[right])) {
+        printf("Philosopher %d could not grab fork %d and is therefore \
+continuing to think\n", tid, right);
+    } else {
+        r = rand() % MAX_EAT + 1;
+        printf("Philosopher %d is eating for %d s\n", tid, r);
+        sleep(r);
+        printf("Philosopher %d has finished eating\n", tid);
+        pthread_mutex_unlock(&forks[right]);
+    }
+
+    pthread_mutex_unlock(&forks[left]);
+
+    return;
+}
+
+void think(int tid) {
+    int r = 0;
+    r = rand() % MAX_THINK + 1;
+    printf("Philosopher %d is thinking for %d s\n", tid, r);
+    sleep(r);
+    return;
+}
+
+void *philosophise(void *arg) {
+    int *tid = (int *) arg;
+
+    /* timeout may only be written to by the parent process. We
+       therefore don't need to use synchronize access to this variable.
+       A lost update only results in one additional eat/think cycle */
+    while (timeout) {
+        think(*tid);        
+        eat(*tid);
+    }
+
+    pthread_exit(NULL);
+}
+
+int main() {
+    int i, tids[NUM_PHIL];
+
+    /* Initialise, make sure all forks are available before the philosophers 
+       start eating */
+    for (i = 0; i < NUM_PHIL; i++) {
+        if(pthread_mutex_init(&forks[i], NULL))
+            exit(-1);
+    }
+    sleep(1);
+    for (i = 0; i < NUM_PHIL; i++) {
+        tids[i] = i;
+        if(pthread_create(&phil[i], NULL, philosophise, (void *) &tids[i]))
+            exit(-2);
+    }
+
+    /* Let the threads run */
+    sleep(TIME_TO_RUN);
+
+    /* Signal program end to the threads */
+    timeout = 0;
+
+    /* Clean up */
+    for (i = 0; i < NUM_PHIL; i++) {
+        pthread_join(phil[i], NULL);
+    }
+    for (i = 0; i < NUM_PHIL; i++) {
+        pthread_mutex_destroy(&forks[i]);
+    }
+
+    return 0;
+}

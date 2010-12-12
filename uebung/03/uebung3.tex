@@ -1,0 +1,133 @@
+\documentclass{scrartcl}
+\usepackage[ngerman]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{listings}
+
+\lstset{language=C, 
+		basicstyle=\footnotesize, 
+		showstringspaces=false
+		numbers=left,
+		numberstyle=\footnotesize,
+		stepnumber=1,
+		numbersep=5pt,		
+		numberstyle=\footnotesize,
+		breaklines=true}
+
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{verbatim}
+
+\begin{document}
+\title{Übung 3}
+\author{Evenij Belikov, Jan Birkholz, Dominik Oepen}
+\maketitle
+
+\section*{Aufgabe 3.1}
+
+\subsection*{a)}
+
+\lstinputlisting{proc_time.c}
+
+Übersetzen mittels \lstinline[language=Bash]$gcc -O2 proc_time.c -o proc_time -Wall -Wextra -std=c99$
+
+Ablaufprotokoll (Drei Durchläufe, in jedem werden 500 Prozesse erzeugt):\\
+\begin{verbatim}
+do@morpheus:~/Studium/Informatik/VL_AVPS/Uebung/03$ Needed 126133 microseconds
+for spawning 500 processes. Mean time for process creation: 252.266000 microseconds
+./proc_time
+do@morpheus:~/Studium/Informatik/VL_AVPS/Uebung/03$ Needed 128490 microseconds
+for spawning 500 processes. Mean time for process creation: 256.980000 microseconds
+./proc_time
+do@morpheus:~/Studium/Informatik/VL_AVPS/Uebung/03$ Needed 138208 microseconds
+for spawning 500 processes. Mean time for process creation: 276.416000 microseconds
+\end{verbatim}
+
+
+\subsection*{b)}
+
+\lstinputlisting{thread_time.c}
+
+Übersetzen mittels \lstinline[language=Bash]$gcc -O2 thread_time.c -o thread_time -Wall -Wextra -std=c99 -lpthread$
+
+Ablaufprotokoll (Drei Durchläufe, in jedem werden 500 Threads erzeugt):\\
+\begin{verbatim}
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ ./thread_time 
+Needed 14236 microseconds for spawning 500 threads. Mean time for thread
+creation: 28.472000 microseconds
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ ./thread_time 
+Needed 9730 microseconds for spawning 500 threads. Mean time for thread
+creation: 19.460000 microseconds
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ ./thread_time 
+Needed 14961 microseconds for spawning 500 threads. Mean time for thread
+creation: 29.922000 microseconds
+
+\end{verbatim}
+\subsection*{c)}
+
+\lstinputlisting[language=Java]{java_time.java}
+
+Übersetzen mittels \lstinline[language=Bash]$javac java_time.java$
+
+Ablaufprotokoll (Drei Durchläufe, in jedem werden 500 Threads erzeugt):\\
+\begin{verbatim}
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ java java_time 
+Needed 21973922 microseconds for spawning 500 threads. Mean time for thread
+creation: 43.947843999999996 microseconds
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ java java_time 
+Needed 20289865 microseconds for spawning 500 threads. Mean time for thread
+creation: 40.579730000000005 microseconds
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ java java_time 
+Needed 20645606 microseconds for spawning 500 threads. Mean time for thread
+creation: 41.291212 microseconds
+\end{verbatim}
+\subsection*{Diskussion und alternative Messung der Prozesserzeugunskosten}
+
+Die oben beschriebenen Messergebnisse wurden auf einem PC mit Intel Core 2 Duo E8400 CPU (3,0 GHz) und 4 GB DDR-2 RAM gewonnen.
+
+Erwartungsgemäß ist die Erzeugung von POSIX Threads \glqq günstiger\grqq als die Erzeugung von Java Threads, welche wiederum \glqq günstiger\grqq als die Erzeugung von Prozessen ist. Überraschend erschien uns, dass die Erzeugung von Prozessen mehr als zehnmal so lange dauert wie die Erzeugung von Posix Threads. Messungen mit einer höheren Anzahl von Prozessen zeigten, dass der gemessene Durchschnitt mit der Anzahl der erzeugten Prozesse wuchs. Folgendes Ablaufprotokoll zeigt Messungen mit 500, 1000 und 2000 Prozessen:
+
+\begin{verbatim}
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ ./proc_time 500
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ Needed 134612 microseconds
+for spawning 500 processes. Mean time for process creation: 269.224000 microseconds
+./proc_time 1000
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ Needed 426391 microseconds
+for spawning 1000 processes. Mean time for process creation: 426.391000 microseconds
+./proc_time 2000
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ Needed 1535728 microseconds
+for spawning 2000 processes. Mean time for process creation: 767.864000 microseconds
+\end{verbatim}
+
+Wir vermuten dass dieser Effekt mit der if-Abfrage zur sofortigen Beendigung der neuen Prozesse innerhalb der for-Schleife zur Prozesserzeugung zusammenhängt. %TODO: Zeilennummern angeben
+Um diesen Effekt zu umgehen führten wir weitere Messungen mit einer alternativen Meßmethode durch. Gemessen wurde diesmal nur die zur Erzeugung eines Prozesses benötigte Zeit:
+
+\lstinputlisting{proc_time_alt.c}
+
+Dieses Programm wurde mit einem Python Skript mehrfach aufgerufen. Das Script war weiterhin für die Aggregation und Auswertung der gemessenen Zeiten verantwortlich:
+
+\lstinputlisting[language=python]{proc_time_alt.py}
+
+Bei dieser Messmethode ist der gemessene Mittelwert nicht mehr von der Anzahl der erzeugten Prozesse abhängig, wie die folgenden drei Durchläufe mit 500, 1000 und 2000 Prozessen zeigen:
+
+\begin{verbatim}
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ ./proc_time_alt.py
+N=500
+Mean: 57.844
+Median: 56.0
+Std. derivation: 22.0275206049
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ vim proc_time_alt.py 
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ ./proc_time_alt.py 1000
+N=1000
+Mean: 56.728
+Median: 56.0
+Std. derivation: 6.79131916493
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/03$ ./proc_time_alt.py 2000
+N=2000
+Mean: 57.977
+Median: 56.0
+Std. derivation: 25.5983489897
+\end{verbatim}
+
+\section*{Aufgabe 3.2}
+
+\end{document}

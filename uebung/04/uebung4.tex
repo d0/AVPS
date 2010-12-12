@@ -1,0 +1,259 @@
+\documentclass{scrartcl}
+\usepackage[ngerman]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{listings}
+
+\lstset{language=C, 
+		basicstyle=\footnotesize, 
+		showstringspaces=false
+		numbers=left,
+		numberstyle=\footnotesize,
+		stepnumber=1,
+		numbersep=5pt,		
+		numberstyle=\footnotesize,
+		breaklines=true}
+
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{verbatim}
+\usepackage{slashbox}
+
+\begin{document}
+\title{Übung 4}
+\author{Evenij Belikov, Jan Birkholz, Dominik Oepen}
+\maketitle
+
+\section*{Aufgabe 4.1}
+
+Übersetzen mittels \lstinline[language=Bash]$gcc -O2 ue41.c -o ue41 -fopenmp -Wall -Wextra -std=c99$
+
+\lstinputlisting{ue41.c}
+
+Auf einem 8-core Xeon E5410 mit 6GB RAM getestet mit dem ergebnis
+(Median von 5 Durchläufen, N=Arraygröße, P=anzahl threads):
+
+\subsection*{1.}
+
+Standardmäßig werden 8 threads benutzt (=anzahl PEs)
+
+\subsection*{2.}
+
+\begin{table}[htp]
+	\begin{center}
+	\begin{tabular}{l|cccc}
+		\toprule
+		\backslashbox{N}{P}	&	1	&	2	&	4	&	8	\\
+		\midrule
+		1000	& 0.000015 & 0.000439 & 0.004040 & 0.005969 \\
+		1000000 & 0.004492 & 0.005594 & 0.007188 & 0.009809 \\
+		100000000 & 0.502611 & 0.435033 & 0.427470 & 0.427241 \\
+		\bottomrule
+	\end{tabular}
+	\label{tab:results}
+	\caption{Messergebnisse}
+	\end{center}
+\end{table}
+
+Für N=1000 und N=1000000 ist der Overhead zu groß, so dass es zu einem slowdown statt einem speedup kommt. Bei N=100000000 lässt sich ein erster (geringer) speedup beobachten. Größere Arraywerte führten zu einem Out of memory error (getestet mit N=1000000000).
+
+\section*{Aufgabe 4.2}
+
+Übersetzen mittels \lstinline[language=Bash]$gcc -O2 phil_deadlock.c -o deadlock -Wall -Wextra -std=c99 -lpthread$
+
+Ein Ablaufprotokoll findet sich in \autoref{sec:results2}
+
+\lstinputlisting{phil_deadlock.c}
+
+Zum Deadlock kann es kommen, wenn alle Philosophen gleichzeitig die linke Gabel aufheben. Sie warten in diesem Fall dann alle unendlich darauf die rechte Gabel aufheben zu könne, welche bereits von ihrem Nachbarn verwendet wird.
+
+Das Problem lässt sich durch eine \glqq Ganz oder gar nicht \grqq Strategie lösen. Jeder Philosph hebt die linke Gabel normal auf. Kann er anschließend die rechte Gabel nicht sofort aufheben, so legt er die linke Gabel wieder zurück und denkt weiter.
+
+Diese Lösung ist nicht fair und kann zu Starvation bei einzelnen Philosophen führen. Deadlocks können aber nicht auftreten.
+
+Übersetzen mittels \lstinline[language=Bash]$gcc -O2 phil_no_deadlock.c -o no_deadlock -Wall -Wextra -std=c99 -lpthread$
+
+Ein Ablaufprotokoll findet sich in \autoref{sec:results2}
+
+\lstinputlisting{phil_no_deadlock.c}
+
+\section*{Aufgabe 4.3}
+
+Vorteile von Dragon gegenüber MESI:
+
+\begin{itemize}
+	\item kürzere Zugriffszeit (führt im Gegensatz zu MESi nicht zu Cache-misses)
+	\item spart Bandbreite (nach Möglichkeit werden kleinere Abschnitte
+geschrieben als Block)
+\end{itemize}
+
+Nachteile von Dragon gegenüber MESI:
+
+\begin{itemize}
+	\item konsekutive Schreiboperationen eines PEs erzeugen mehere
+Update-Transaktionen
+\end{itemize}
+
+\begin{appendix}
+	\section{Ausgabeprotokolle}
+	\subsection{4.2}
+	\label{sec:results2}
+	Variante mit potentiellem Deadlock:
+\begin{verbatim}
+do@morpheus:~/Studium/Informatik/VL AVPS/Uebung/04$ ./dead
+Philosopher 0 is thinking for 4 s
+Philosopher 1 is thinking for 2 s
+Philosopher 3 is thinking for 1 s
+Philosopher 2 is thinking for 3 s
+Philosopher 4 is thinking for 4 s
+Philosopher 3 is picking up fork 3 and 4
+Philosopher 3 is eating for 1 s
+Philosopher 1 is picking up fork 1 and 2
+Philosopher 1 is eating for 2 s
+Philosopher 3 has finished eating
+Philosopher 3 is thinking for 3 s
+Philosopher 2 is picking up fork 2 and 3
+Philosopher 0 is picking up fork 0 and 1
+Philosopher 4 is picking up fork 4 and 0
+Philosopher 1 has finished eating
+Philosopher 0 is eating for 5 s
+Philosopher 1 is thinking for 2 s
+Philosopher 2 is eating for 3 s
+Philosopher 3 is picking up fork 3 and 4
+Philosopher 1 is picking up fork 1 and 2
+Philosopher 2 has finished eating
+Philosopher 2 is thinking for 3 s
+Philosopher 0 has finished eating
+Philosopher 4 is eating for 1 s
+Philosopher 0 is thinking for 5 s
+Philosopher 1 is eating for 4 s
+Philosopher 4 has finished eating
+Philosopher 2 is picking up fork 2 and 3
+Philosopher 4 is thinking for 2 s
+Philosopher 3 is eating for 1 s
+Philosopher 3 has finished eating
+Philosopher 3 is thinking for 2 s
+Philosopher 4 is picking up fork 4 and 0
+Philosopher 4 is eating for 3 s
+Philosopher 1 has finished eating
+Philosopher 1 is thinking for 2 s
+Philosopher 2 is eating for 2 s
+Philosopher 3 is picking up fork 3 and 4
+Philosopher 0 is picking up fork 0 and 1
+Philosopher 1 is picking up fork 1 and 2
+Philosopher 2 has finished eating
+Philosopher 1 is eating for 4 s
+Philosopher 2 is thinking for 3 s
+Philosopher 4 has finished eating
+Philosopher 3 is eating for 5 s
+Philosopher 4 is thinking for 3 s
+Philosopher 2 is picking up fork 2 and 3
+Philosopher 4 is picking up fork 4 and 0
+Philosopher 1 has finished eating
+Philosopher 0 is eating for 1 s
+Philosopher 1 is thinking for 3 s
+Philosopher 3 has finished eating
+Philosopher 3 has eaten 7 seconds during this program run
+Philosopher 2 is eating for 4 s
+Philosopher 0 has finished eating
+Philosopher 0 has eaten 6 seconds during this program run
+Philosopher 4 is eating for 3 s
+Philosopher 1 is picking up fork 1 and 2
+Philosopher 4 has finished eating
+Philosopher 4 has eaten 7 seconds during this program run
+Philosopher 2 has finished eating
+Philosopher 2 has eaten 9 seconds during this program run
+Philosopher 1 is eating for 1 s
+Philosopher 1 has finished eating
+Philosopher 1 has eaten 11 seconds during this program run
+\end{verbatim}
+Ohne Möglichkeit eines Deadlocks:
+
+\begin{verbatim}
+azrael@morpheus:~/Studium/Informatik/VL AVPS/Uebung/04$ ./no_dead 
+Philosopher 0 is thinking for 4 s
+Philosopher 1 is thinking for 2 s
+Philosopher 2 is thinking for 3 s
+Philosopher 3 is thinking for 1 s
+Philosopher 4 is thinking for 4 s
+Philosopher 3 waiting for fork 3
+Philosopher 3 is eating for 1 s
+Philosopher 1 waiting for fork 1
+Philosopher 1 is eating for 2 s
+Philosopher 3 has finished eating
+Philosopher 3 is thinking for 3 s
+Philosopher 2 waiting for fork 2
+Philosopher 0 waiting for fork 0
+Philosopher 0 could not grab fork 1 and is therefore continuing to think
+Philosopher 0 is thinking for 5 s
+Philosopher 4 waiting for fork 4
+Philosopher 4 is eating for 2 s
+Philosopher 1 has finished eating
+Philosopher 1 is thinking for 3 s
+Philosopher 2 is eating for 3 s
+Philosopher 3 waiting for fork 3
+Philosopher 4 has finished eating
+Philosopher 4 is thinking for 1 s
+Philosopher 1 waiting for fork 1
+Philosopher 1 could not grab fork 2 and is therefore continuing to think
+Philosopher 1 is thinking for 5 s
+Philosopher 2 has finished eating
+Philosopher 4 waiting for fork 4
+Philosopher 3 is eating for 2 s
+Philosopher 2 is thinking for 4 s
+Philosopher 0 waiting for fork 0
+Philosopher 0 is eating for 1 s
+Philosopher 3 has finished eating
+Philosopher 3 is thinking for 2 s
+Philosopher 4 could not grab fork 0 and is therefore continuing to think
+Philosopher 4 is thinking for 3 s
+Philosopher 0 has finished eating
+Philosopher 0 is thinking for 2 s
+Philosopher 2 waiting for fork 2
+Philosopher 2 is eating for 2 s
+Philosopher 3 waiting for fork 3
+Philosopher 1 waiting for fork 1
+Philosopher 1 could not grab fork 2 and is therefore continuing to think
+Philosopher 1 is thinking for 4 s
+Philosopher 0 waiting for fork 0
+Philosopher 0 is eating for 3 s
+Philosopher 4 waiting for fork 4
+Philosopher 4 could not grab fork 0 and is therefore continuing to think
+Philosopher 4 is thinking for 5 s
+Philosopher 2 has finished eating
+Philosopher 2 is thinking for 3 s
+Philosopher 3 is eating for 1 s
+Philosopher 3 has finished eating
+Philosopher 3 is thinking for 3 s
+Philosopher 0 has finished eating
+Philosopher 0 is thinking for 4 s
+Philosopher 1 waiting for fork 1
+Philosopher 1 is eating for 3 s
+Philosopher 2 waiting for fork 2
+Philosopher 4 waiting for fork 4
+Philosopher 4 is eating for 1 s
+Philosopher 3 waiting for fork 3
+Philosopher 3 could not grab fork 4 and is therefore continuing to think
+Philosopher 3 is thinking for 5 s
+Philosopher 4 has finished eating
+Philosopher 4 is thinking for 3 s
+Philosopher 0 waiting for fork 0
+Philosopher 0 could not grab fork 1 and is therefore continuing to think
+Philosopher 0 is thinking for 3 s
+Philosopher 1 has finished eating
+Philosopher 1 is thinking for 4 s
+Philosopher 2 is eating for 5 s
+Philosopher 4 waiting for fork 4
+Philosopher 4 is eating for 3 s
+Philosopher 0 waiting for fork 0
+Philosopher 3 waiting for fork 3
+Philosopher 1 waiting for fork 1
+Philosopher 1 could not grab fork 2 and is therefore continuing to think
+Philosopher 2 has finished eating
+Philosopher 3 could not grab fork 4 and is therefore continuing to think
+Philosopher 4 has finished eating
+Philosopher 0 is eating for 4 s
+Philosopher 0 has finished eating
+\end{verbatim}
+\end{appendix}
+
+\end{document}

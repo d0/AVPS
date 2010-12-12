@@ -1,0 +1,149 @@
+\documentclass{scrartcl}
+\usepackage[ngerman]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{listings}
+
+\lstset{language=C, 
+		basicstyle=\footnotesize, 
+		showstringspaces=false
+		numbers=left,
+		numberstyle=\footnotesize,
+		breaklines=true}
+
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\begin{document}
+\title{Übung 2}
+\author{Evenij Belikov\\Jan Birkholz\\Dominik Oepen}
+\maketitle
+
+\section*{Aufgabe 2.1}
+
+\lstinputlisting{uebung2.c}
+
+Die Messwerte der einzelnen Parametersätze sind in \autoref{messwerte} aufgeführt. Es wurde mit jeder Methode jeweils mit 2, 4 und 8 Prozessen und einer Arraygröße von 1024, 1048576 und 33554432 Elementen gemessen. Die lokale Ausführung fand auf einem PC mit einem Intel Core 2 Duo E8400 (3 GHz) und 4 GB DDR-2 Ram statt. Bei der verteilten Messung wurde zusätzlich ein Laptop mit Intel Core 2 Duo P9600 (2,53 GHz) und ebenfalls 4 GB Ram verwendet. Beide Knoten waren dabei via 100 MBit Ethernet verbunden.
+
+
+\section*{Aufgabe 2.2}
+
+Verwendet wurde OpenMPI aus den Repositories von Ubuntu 10.10. In
+dieser MPI\-Distribution ist \texttt{MPI\_SEND} als gepuffertes Senden
+implementiert. Dies lässt sich über den in Aufgabe 2.3 nachgestellten
+Deadlock verifizieren. Wird dort die Methode \texttt{MPI\_SEND} verwendet so
+kommt es zu keinem Deadlock. Dies kann nur bei der der Verwendung
+eines gepufferten Sendekommandos zutreffen, da in diesem Fall das
+der sendende Prozess nicht blockiert, sondern das \texttt{MPI\_RECV} aufrufen
+kann.
+
+Die Gegenprobe erfolgt über die Verwendung \texttt{MPI\_SSEND} in Aufgabe
+2.3, was in der Tat zu einem Deadlock führt.
+
+\section*{Aufgabe 2.3}
+
+%Beide Situation werden in \lstinline$uebung2_3.c$ nachgestellt. Der Quellcode wird mit:
+%
+%\begin{lstlisting}
+%	mpicc -O3 deadlock.c -o deadlock -Wall -Wextra
+%\end{lstlisting} 
+%
+%übersetzt. Die Aufrufstruktur des Programms ist die Folgende:
+%\begin{lstlisting}
+%	mpirun -np N ./deadlock --problem=prob --solution=sol
+%\end{lstlisting}
+%
+%Der Parameter \texttt{problem} bestimmt dabei welche der beiden Situation nachgestellt werden soll. Zulässige Werte sind \texttt{deadlock} und \texttt{order}.
+
+Der Parameter \texttt{solution} legt fest ob und welche
+Lösungsstrategie verwendet werden soll. Erlaubt sind hier die Zahlen
+1, 2 und 3.
+
+\lstinputlisting{uebung2_3.c}
+
+Im Deadlock-Szenario führt Lösung 1 zur Verwendung eines gepufferten
+Sendemechanismus (\texttt{MPI\_BSEND}). Lösung 2 führt zur Vertauschung der
+Reihenfolge von \texttt{MPI\_SEND} und \texttt{MPI\_RECV} beim zweiten Prozess.
+
+Im Szenario der vertauschten Nachrichtenreihenfolge führen Lösung 1
+und 2 zur Synchronisation mittels \texttt{MPI\_BARRIER} and unterschiedlichen Stellen. In beiden Fällen wird sichergestellt, dass Prozess 3 die Nachricht von Prozess 1 erhalten hat bevor er das zweite \texttt{MPI\_RECV} aufruft. Lösung 3 besteht in der synchronen Versendung der Nachrichten mittels \texttt{MPI\_SSEND}. Dadurch wird die Nachrichtenreihenfolge beibehalten.
+\section*{Aufgabe 2.4}
+
+\begin{appendix}
+\section{Messwerte}\label{messwerte}
+\begin{table}[htp]
+\begin{tabular}{lllcc}
+\toprule
+np	& method& size		& Durchschnittliche Dauer & Standardabweichung \\
+\midrule
+2	& send	& 1024		& 6.37e-05	& 7.50067330311e-05 \\
+2	& send	& 1048576	& 0.0084882	& 0.00189346570077 \\
+2	& send	& 33554432	& 0.2137896	& 0.0167108683509 \\
+2	& ssend	& 1024		& 0.0001677	& 0.000262018720705 \\
+2	& ssend	& 1048576	& 0.0071808	& 0.00164163027506 \\
+2	& ssend	& 33554432	& 0.2403283	& 0.02819272542 \\
+2	& bsend	& 1024		& 0.0011329	& 0.00213817297944 \\
+2	& bsend	& 1048576	& 0.0154501	& 0.00336053446493 \\
+2	& bsend	& 33554432	& 0.3842997	& 0.0357175572626 \\
+4	& send	& 1024		& 0.0010367	& 0.0003890066966 \\
+4	& send	& 1048576	& 0.0137986	& 0.00169043835735 \\
+4	& send	& 33554432	& 0.3312539	& 0.02545613736 \\
+4	& ssend	& 1024		& 0.0016339	& 0.000230677458803 \\
+4	& ssend	& 1048576	& 0.0147138	& 0.00224142975799 \\
+4	& ssend	& 33554432	& 0.3478213	& 0.0143619781301 \\
+4	& bsend	& 1024		& 0.0010497	& 8.47007083796e-05 \\
+4	& bsend	& 1048576	& 0.0221432	& 0.00250709983048 \\
+4	& bsend	& 33554432	& 0.5389012	& 0.086010165642 \\
+8	& send	& 1024		& 0.0026242	& 0.000991653245848 \\
+8	& send	& 1048576	& 0.023807	& 0.00355234826558 \\
+8	& send	& 33554432	& 0.5304979	& 0.0383064658966 \\
+8	& ssend	& 1024		& 0.0049845	& 0.00204005736439 \\
+8	& ssend	& 1048576	& 0.0289121	& 0.00360859206478 \\
+8	& ssend	& 33554432	& 0.6618364	& 0.0552136746182 \\
+8	& bsend	& 1024		& 0.003448	& 0.00110447489786 \\
+8	& bsend	& 1048576	& 0.0405434	& 0.0078483432927 \\
+8	& bsend	& 33554432	& 0.965756	& 0.0803113744783 \\
+\bottomrule
+\end{tabular}
+\label{tab:lokal}
+\caption{Messergebniss bei lokaler Ausführung}
+\end{table}
+
+\begin{table}[htp]
+\begin{tabular}{lllcc}
+\toprule
+np	& method& size		& Durchschnittliche Dauer & Standardabweichung \\
+\midrule
+2	& send	& 1024		& 0.0050274	& 0.0148725333767 \\
+2	& send	& 1048576	& 0.0176759	& 0.0279778427133 \\
+2	& send	& 33554432	& 0.2135077	& 0.0148670983588 \\
+2	& ssend	& 1024		& 6.85e-05	& 1.20415945788e-06 \\
+2	& ssend	& 1048576	& 0.0077274	& 0.00201575138348 \\
+2	& ssend	& 33554432	& 0.2145943	& 0.0157753960714 \\
+2	& bsend	& 1024		& 7.72e-05	& 1.09617516848e-05 \\
+2	& bsend	& 1048576	& 0.012425	& 0.00159733164997 \\
+2	& bsend	& 33554432	& 0.3326128	& 0.00620659395804 \\
+4	& send	& 1024		& 0.0018878	& 0.000510647197192 \\
+4	& send	& 1048576	& 0.1258536	& 0.00138760521763 \\
+4	& send	& 33554432	& 4.0216421	& 0.0386633531951 \\
+4	& ssend	& 1024		& 0.0017445	& 0.000744792756409 \\
+4	& ssend	& 1048576	& 0.127911	& 0.00242306574405 \\
+4	& ssend	& 33554432	& 4.0221775	& 0.0260878917479 \\
+4	& bsend	& 1024		& 0.0015531	& 0.000385118540192 \\
+4	& bsend	& 1048576	& 0.1302235	& 0.00347815632915 \\
+4	& bsend	& 33554432	& 4.1590669	& 0.078720831001 \\
+8	& send	& 1024		& 0.003105	& 0.000588689561654 \\
+8	& send	& 1048576	& 0.1146384	& 0.00143346567451 \\
+8	& send	& 33554432	& 3.5846085	& 0.0276869637348 \\
+8	& ssend	& 1024		& 0.0045598	& 0.00212628369697 \\
+8	& ssend	& 1048576	& 0.1150149	& 0.00266901223114 \\
+8	& ssend	& 33554432	& 3.6479422	& 0.0249198420212 \\
+8	& bsend	& 1024		& 0.0030144	& 0.000674932026207 \\
+8	& bsend	& 1048576	& 0.1227474	& 0.00620574171554 \\
+8	& bsend	& 33554432	& 3.8256719	& 0.108386780645 \\
+\bottomrule
+\end{tabular}
+\label{tab:verteilt}
+\caption{Messergebniss bei verteilter Ausführung}
+\end{table}
+\end{appendix}
+\end{document}
