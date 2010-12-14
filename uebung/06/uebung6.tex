@@ -39,11 +39,11 @@ welche alle bidirektional miteinander verbunden sind.
 
 \subsection*{Programmdurchlauf}
 \begin{verbatim}
-do@do-Precision-T1500:~/workspace/AVPS/uebung/06$ erl
 Erlang R13B03 (erts-5.7.4) [source] [64-bit] [smp:4:4] [rq:4] [async-threads:0] [hipe] [kernel-poll:false]
 
 Eshell V5.7.4  (abort with ^G)
 1> c(chandy).
+./chandy.erl:39: Warning: variable 'Rest' is unused
 {ok,chandy}
 2> chandy:start().
 Passive Process started: PID:<0.42.0>
@@ -75,11 +75,16 @@ Process self is starting the Chandy-Lamport algorithm
 <0.43.0> has finished taking a snapshot
 <0.44.0> has received markers from all other processes
 <0.42.0> has finished taking a snapshot
-{<0.43.0>,{1337,23}}
+{state,<0.43.0>,{1213,23}}
 <0.44.0> has finished taking a snapshot
-{<0.42.0>,{2000,50}}
-{<0.44.0>,{0,900}}
+{state,<0.42.0>,{1815,50}}
+{state,<0.44.0>,{0,900}}
+{msg,<0.42.0>,{185,0}}
+{msg,<0.43.0>,{124,0}}
 3> 
+BREAK: (a)bort (c)ontinue (p)roc info (i)nfo (l)oaded
+       (v)ersion (k)ill (D)b-tables (d)istribution
+a
 \end{verbatim}
 
 \section*{Aufgabe 6.3}
