@@ -83,7 +83,7 @@ record_traffic(Incoming, Messages) ->
 %   list of all incoming channels, channel on which the first marker was
 %   received
 chandy_lamport({Schrauben, Euro}, Incoming, Outgoing) ->
-    io:format("Process ~w is starting the Chandy-Lamport algorithm~n", [self]),
+    io:format("Process ~w is starting the Chandy-Lamport algorithm~n", [self()]),
     %Record state
     State = {state, self(), {Schrauben, Euro}},
     %Send marker to all processes
