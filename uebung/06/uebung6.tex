@@ -11,7 +11,7 @@
 		breaklines=true}
 
 \usepackage{booktabs}
-\usepackage{hyperref}
+\usepackage[colorlinks=false, pdfborder={0 0 0}]{hyperref}
 
 %Pictures
 %\usepackage{graphicx} %for pictures
@@ -19,6 +19,9 @@
 %\begin{figure}
 %\includegraphics[scale=1]{send_recv_bwlf_3.eps}
 %\end{figure}
+
+\usepackage{amsthm, amssymb, amsfonts}
+\newtheorem{lem}{Lemma}
 
 \begin{document}
 \title{Übung 6}
@@ -29,17 +32,33 @@
 
 \section*{Aufgabe 6.2}
 
-
-
 \section*{Aufgabe 6.3}
-$ e \rightarrow e' \longrightarrow  V(e) < V(e') $\\
-Nach HB1 existiert ein Prozess $ p_{i}: e \rightarrow_{i} e' $, was wiederum nach der Definition der Totalen Ordnung heißt: e findet vor e' in $ p_{i} $ statt.
-Wenn es so einen Prozess gibt dann muss $V(e) < V(e')$ denn nach VC2 wird vor Eintritt des Ereignisses der Zeitstempel erhöht.\\
-$V(e) < V(e') \longrightarrow e \rightarrow e' $ \\
-Die Vektoruhr von e ist kleiner als die von e'. Damit das passieren kann muss entweder nach VC2 ein Prozess $p_{i}$ vor einem Ereignis einen Zeitstempel erhöht haben(1), oder nach VC4 eine Nachricht erhalten haben die einen größeren Zeitstempel hat(2).\\
-(1) Wegen VC2 folgt auch das jeweils ein Ereignis stattgefunden hat (nach dem Erhöhen). Da das Erhöhen vor dem 2. Ereignis stattgefunden haben muss, gibt es entweder einen Prozess (HB1) $p_{i}$ in dem $e \rightarrow e'$ oder mehrere hintereinander (HB3).\\
-(2) Da nach HB2 das Empfangen nach dem Senden stattfindet, muss es ein Sendereignis e geben welches vor dem Empfangen von e' lag.\\
+Zu zeigen: $ e \rightarrow e' \Longleftrightarrow  V(e) < V(e') $
 
+\begin{lem}\label{lem:1}
+$ e \rightarrow e' \Longrightarrow  V(e) < V(e') $
+\end{lem}
+
+\begin{proof}
+Nach HB1 existiert ein Prozess $ p_{i}: e \rightarrow_{i} e' $, was wiederum nach der Definition der Totalen Ordnung heißt: e findet vor e' in $ p_{i} $ statt.
+Wenn es so einen Prozess gibt dann muss $V(e) < V(e')$ denn nach VC2 wird vor Eintritt des Ereignisses der Zeitstempel erhöht.
+\end{proof}
+
+\begin{lem}\label{lem:2}
+$V(e) < V(e') \Longrightarrow e \rightarrow e' $
+\end{lem}
+
+\begin{proof}
+Die Vektoruhr von e ist kleiner als die von e'. Damit das passieren kann muss entweder nach VC2 ein Prozess $p_{i}$ vor einem Ereignis einen Zeitstempel erhöht haben (\ref{item:part1}), oder nach VC4 eine Nachricht erhalten haben die einen größeren Zeitstempel hat (\ref{item:part2}).
+\begin{enumerate}
+\item \label{item:part1} Wegen VC2 folgt auch das jeweils ein Ereignis stattgefunden hat (nach dem Erhöhen). Da das Erhöhen vor dem 2. Ereignis stattgefunden haben muss, gibt es entweder einen Prozess (HB1) $p_{i}$ in dem $e \rightarrow e'$ oder mehrere hintereinander (HB3).
+\item \label{item:part2} Da nach HB2 das Empfangen nach dem Senden stattfindet, muss es ein Sendereignis e geben welches vor dem Empfangen von e' lag.
+\end{enumerate}
+\end{proof}
+
+Aus Lemma 1 und Lemma 2 folgt: $ e \rightarrow e' \Longleftrightarrow  V(e) < V(e') $. \qed
+
+%\qedhere
 %Der Parameter \texttt{solution} legt fest ob und welche Lösungsstrategie verwendet werden soll. Erlaubt sind hier die Zahlen 1, 2 und 3.
 
 %\begin{appendix}
