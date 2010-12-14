@@ -31,7 +31,56 @@
 \section*{Aufgabe 6.1}
 
 \section*{Aufgabe 6.2}
+Wir stellen ein Beispiel ähnlich dem aus der Vorlesung nach, allerdings mit drei Prozessen,
+welche alle bidirektional miteinander verbunden sind.
+
+\subsection*{Quellcode}
 \lstinputlisting{chandy.erl}
+
+\subsection*{Programmdurchlauf}
+\begin{verbatim}
+do@do-Precision-T1500:~/workspace/AVPS/uebung/06$ erl
+Erlang R13B03 (erts-5.7.4) [source] [64-bit] [smp:4:4] [rq:4] [async-threads:0] [hipe] [kernel-poll:false]
+
+Eshell V5.7.4  (abort with ^G)
+1> c(chandy).
+{ok,chandy}
+2> chandy:start().
+Passive Process started: PID:<0.42.0>
+Passive Process started: PID:<0.43.0>
+Active process started. PID: <0.44.0>
+<0.44.0>
+<0.44.0> is connected with <0.42.0>
+<0.44.0> is connected with <0.43.0>
+   
+Process self is starting the Chandy-Lamport algorithm
+<0.42.0>: Received list of partners
+<0.43.0>: Received list of partners
+<0.42.0> is connected with <0.44.0>
+<0.43.0> is connected with <0.44.0>
+<0.42.0> is connected with <0.43.0>
+<0.43.0> is connected with <0.42.0>
+   
+   
+<0.42.0> received marker from <0.44.0>
+<0.43.0> received marker from <0.44.0>
+Process self is starting the Chandy-Lamport algorithm
+Process self is starting the Chandy-Lamport algorithm
+<0.43.0> has received a marker from process <0.42.0>
+<0.44.0> has received a marker from process <0.42.0>
+<0.42.0> has received a marker from process <0.43.0>
+<0.43.0> has received markers from all other processes
+<0.44.0> has received a marker from process <0.43.0>
+<0.42.0> has received markers from all other processes
+<0.43.0> has finished taking a snapshot
+<0.44.0> has received markers from all other processes
+<0.42.0> has finished taking a snapshot
+{<0.43.0>,{1337,23}}
+<0.44.0> has finished taking a snapshot
+{<0.42.0>,{2000,50}}
+{<0.44.0>,{0,900}}
+3> 
+\end{verbatim}
 
 \section*{Aufgabe 6.3}
 Zu zeigen: $ e \rightarrow e' \Longleftrightarrow  V(e) < V(e') $
