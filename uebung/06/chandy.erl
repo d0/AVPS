@@ -28,11 +28,11 @@ active_proc({Schrauben, Euro}, Partners) ->
 
 %A process that doesn't start Chandy-Lamport
 passive_proc({Schrauben, Euro}) ->
-    io:format("P2 meldet sich zum Dienst: PID:~w~n", [self()]),
+    io:format("Passive Process started: PID:~w~n", [self()]),
     receive
         {pids, Partners} ->
             lists:delete(self(), Partners),
-            io:format("~w: Liste der Partner empfangen~n", [self()]),
+            io:format("~w: Received list of partners~n", [self()]),
             print_partners(Partners),
             passive_proc({Schrauben, Euro}, Partners)
     end.
@@ -60,7 +60,7 @@ send_markers([]) ->
 record_traffic(Incoming) ->
     record_traffic(Incoming, []).
 record_traffic([], Messages) ->
-    io:format("~w hat Marker von allen Partnern empfangen~n", [self()]),
+    io:format("~w has received markers from all other processes~n", [self()]),
     Messages;
 record_traffic(Incoming, Messages) ->
     receive
@@ -69,7 +69,7 @@ record_traffic(Incoming, Messages) ->
             record_traffic(incoming, lists:append(Messages, [{Pid, {Schrauben, Euro}}]));
         %Marker received. Stop recording and return empty list (no messages received)
         {Pid, chandy} ->
-            io:format("Marker von Prozess ~w empfangen~n", [Pid]),
+            io:format("~w has received a marker from process ~w~n", [self(), Pid]),
             record_traffic(lists:delete(Pid, Incoming), Messages)
     end.
 
@@ -84,8 +84,8 @@ chandy_lamport({Schrauben, Euro}, Incoming, Outgoing) ->
     %Send marker to all processes
     send_markers(Outgoing),
     %Record messages on all inbound channels
-    %TODO: make sure first_marker is not part of outgoing list
     Recorded_messages = record_traffic(Incoming),
+    io:format("~w has finished taking a snapshot~n", [self()]),
     [State | Recorded_messages].
 
 start() ->
