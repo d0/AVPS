@@ -34,7 +34,12 @@ passive_proc({Schrauben, Euro}) ->
             lists:delete(self(), Partners),
             io:format("~w: Received list of partners~n", [self()]),
             print_partners(Partners),
-            passive_proc({Schrauben, Euro}, Partners)
+            %Send a random amount of screws to the
+            %the first process in the Partners list
+            [First | Rest] = Partners,
+            Rand = random:uniform(Schrauben),
+            First ! {self(), {Rand, 0}},
+            passive_proc({Schrauben - Rand, Euro}, Partners)
     end.
 
 passive_proc({Schrauben, Euro}, Partners) ->
@@ -66,7 +71,7 @@ record_traffic(Incoming, Messages) ->
     receive
         %Normal message: Record it and keep on listening
         {Pid, {Schrauben, Euro}} ->
-            record_traffic(incoming, lists:append(Messages, [{Pid, {Schrauben, Euro}}]));
+            record_traffic(Incoming, lists:append(Messages, [{msg, Pid, {Schrauben, Euro}}]));
         %Marker received. Stop recording and return empty list (no messages received)
         {Pid, chandy} ->
             io:format("~w has received a marker from process ~w~n", [self(), Pid]),
@@ -80,7 +85,7 @@ record_traffic(Incoming, Messages) ->
 chandy_lamport({Schrauben, Euro}, Incoming, Outgoing) ->
     io:format("Process ~w is starting the Chandy-Lamport algorithm~n", [self]),
     %Record state
-    State = {self(), {Schrauben, Euro}},
+    State = {state, self(), {Schrauben, Euro}},
     %Send marker to all processes
     send_markers(Outgoing),
     %Record messages on all inbound channels
