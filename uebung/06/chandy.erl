@@ -10,6 +10,12 @@ print_partners([Head | Tail]) ->
 send_pid(Partners) ->
     lists:foreach(fun(P) -> P ! {pids, lists:delete(P, Partners)} end, Partners).
 
+print_state([Head | Tail]) ->
+    io:format("~w~n", [Head]),
+    print_state(Tail);
+print_state([]) ->
+    nothing.
+
 %The process that starts Chandy-Lamport
 active_proc({Schrauben, Euro}, Partners) ->
     io:format("Active process started. PID: ~w~n", [self()]),
@@ -17,7 +23,8 @@ active_proc({Schrauben, Euro}, Partners) ->
     %Send the PIDs to all processes
     send_pid([self() | Partners]), 
     %Start Chandy-Lamport algorithm
-    chandy_lamport({Schrauben, Euro}, Partners, Partners, []).
+    State = chandy_lamport({Schrauben, Euro}, Partners, Partners),
+    print_state(State).
 
 %A process that doesn't start Chandy-Lamport
 passive_proc({Schrauben, Euro}) ->
@@ -25,17 +32,17 @@ passive_proc({Schrauben, Euro}) ->
     receive
         {pids, Partners} ->
             lists:delete(self(), Partners),
-            io:format("~w: Liste der Partner empfangen", [self()]),
+            io:format("~w: Liste der Partner empfangen~n", [self()]),
             print_partners(Partners),
             passive_proc({Schrauben, Euro}, Partners)
     end.
 
 passive_proc({Schrauben, Euro}, Partners) ->
     receive
-        %Chandy-Lamport: First we dump our state
-        chandy ->
-            io:format("State of ~w: ~w Schrauben und ~w Euro ~n",[self(), Schrauben, Euro]),
-            chandy_lamport({Schrauben, Euro}, Partners, Partners, [])
+        {PID, chandy} ->
+            io:format("~w received marker from ~w~n", [self(), PID]),
+            State = chandy_lamport({Schrauben, Euro}, lists:delete(PID, Partners), Partners),
+            print_state(State)
     end.
 
 %Send markers over all outgoing channels
@@ -53,12 +60,13 @@ send_markers([]) ->
 record_traffic(Incoming) ->
     record_traffic(Incoming, []).
 record_traffic([], Messages) ->
+    io:format("~w hat Marker von allen Partnern empfangen~n", [self()]),
     Messages;
 record_traffic(Incoming, Messages) ->
     receive
         %Normal message: Record it and keep on listening
         {Pid, {Schrauben, Euro}} ->
-            record_traffic(incoming, lists:append(Messages, [{Schrauben, Euro}]));
+            record_traffic(incoming, lists:append(Messages, [{Pid, {Schrauben, Euro}}]));
         %Marker received. Stop recording and return empty list (no messages received)
         {Pid, chandy} ->
             io:format("Marker von Prozess ~w empfangen~n", [Pid]),
@@ -69,7 +77,8 @@ record_traffic(Incoming, Messages) ->
 %Parameters: Own state ({Schrauben, Euro}), list of all outgoing channels,
 %   list of all incoming channels, channel on which the first marker was
 %   received
-chandy_lamport({Schrauben, Euro}, Incoming, Outgoing, First_marker) ->
+chandy_lamport({Schrauben, Euro}, Incoming, Outgoing) ->
+    io:format("Process ~w is starting the Chandy-Lamport algorithm~n", [self]),
     %Record state
     State = {self(), {Schrauben, Euro}},
     %Send marker to all processes
