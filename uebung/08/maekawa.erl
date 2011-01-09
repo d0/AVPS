@@ -15,6 +15,7 @@ init(Num_procs) ->
     lists:foreach(fun(Elem) -> lists:foreach(fun(Elem2) -> Elem2 ! Elem end,Elem) end,Overlapped),
     %Send a message to process 2 in order to start Maekawa algorithm
     lists:nth(2, Procs) ! go.
+    
 
 create_procs(Num, List) ->
     if Num > 0 ->
@@ -44,26 +45,58 @@ overlap(PID, [Head | Rest], Result) ->
             overlap(PID, Rest, lists:append(Result, [Head]))
     end;
 
-overlap(PID, [], Result) ->
+overlap(_PID, [], Result) ->
     Result.
 
 new_node() ->
     receive Groupmembers ->
-            io:format("~w: Group ~w~n",[self(),Groupmembers])
-%            nothing
+            %io:format("~w: Group ~w~n",[self(),Groupmembers])
+            nothing
     end,
-    State = released,
-    Voted = false,
+    %State = released,
+    %Voted = false,
     %Wait for a message before entering critical section
-    receive 
-        go ->
-            io:format("Ywah",[])
-    end,
-    aquire_mutex().
+    new_node(Groupmembers).
+    %aquire_mutex().
 
-aquire_mutex() ->
-    io:format("Waiting is over for: ~p~n", [self()]),
-    nothing.
+new_node(Groupmembers) ->
+	receive 
+       		Msg ->
+			case Msg of 
+				go ->
+					io:format("~p: Mutex: going crit~n",[self()]),
+    					aquire_mutex(Groupmembers);
+				{request,Pid} ->
+					io:format("~p: Mutex?: got request~n",[self()]),
+					Pid ! {reply,self()};
+				%ignore any more Groupmember Messages the overlapping elem gets
+				_ ->
+					%io:format("~p: ignoring ~p~n",[self(),Msg])
+					nothing
+		end
+    	end,
+	new_node(Groupmembers).
+
+
+aquire_mutex(Groupmembers) ->
+    io:format("~p: Mutex: Waiting is over~n", [self()]),
+    %nothing.
+    %State = wanted,
+    lists:foreach(fun(Elem) -> Elem ! {request,self()} end,[X || X<-Groupmembers, X=/=self()]),
+    getreplies([X || X<-Groupmembers, X=/=self()]),
+    held.
+
+getreplies([]) -> 
+	[],
+	io:format("~p: Mutex: got all replies~n",[self()]);
+
+getreplies(Groupmembers) ->
+	receive 
+		{reply,Pid} ->
+			io:format("~p: Mutex: received reply from ~p~n",[self(),Pid])
+	end,
+	getreplies(lists:delete(Pid,Groupmembers)).
+
 
 ceiling(X) ->
     T = erlang:trunc(X),
