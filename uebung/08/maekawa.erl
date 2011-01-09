@@ -14,7 +14,12 @@ init(Num_procs) ->
 
     lists:foreach(fun(Elem) -> lists:foreach(fun(Elem2) -> Elem2 ! Elem end,Elem) end,Overlapped),
     %Send a message to process 2 in order to start Maekawa algorithm
-    lists:nth(2, Procs) ! go.
+    lists:nth(2, Procs) ! go,
+    receive
+    after 2000 ->
+		    nothing
+    end,
+    lists:nth(2, Procs) ! stop.
     
 
 create_procs(Num, List) ->
@@ -53,38 +58,62 @@ new_node() ->
             %io:format("~w: Group ~w~n",[self(),Groupmembers])
             nothing
     end,
-    %State = released,
-    %Voted = false,
     %Wait for a message before entering critical section
-    new_node(Groupmembers).
-    %aquire_mutex().
+    new_node(Groupmembers,{released,false},[]). %{State,Voted}
 
-new_node(Groupmembers) ->
+new_node(Groupmembers, {State, Voted}, Queue) ->
+	%{State, Voted} = States,
+	io:format("~p: State {~p,~p}~n",[self(),State, Voted]),
 	receive 
        		Msg ->
 			case Msg of 
 				go ->
 					io:format("~p: Mutex: going crit~n",[self()]),
-    					aquire_mutex(Groupmembers);
+					new_node(Groupmembers, aquire_mutex(Groupmembers,{wanted,Voted}),Queue);
+				stop ->
+					io:format("~p: Mutex: going noncrit~n",[self()]),
+					new_node(Groupmembers, release_mutex(Groupmembers,{released,Voted}),Queue);
 				{request,Pid} ->
-					io:format("~p: Mutex?: got request~n",[self()]),
-					Pid ! {reply,self()};
+					io:format("~p: Mutexrequest~n",[self()]),
+					if 
+						(Voted == true) or (State == held) -> 
+							io:format("~p: queue request from pj without replying~n",[self()]),
+							NewQueue = lists:append(Queue, [Pid]),
+							new_node(Groupmembers, {State, Voted}, NewQueue);
+						(Voted /= true) or (State /= held) -> 
+							Pid ! {reply,self()},
+							new_node(Groupmembers, {State, true},Queue)
+							%io:format("~p: {~p,~p} ~n",[self(),State, Voted])
+					end;
 				%ignore any more Groupmember Messages the overlapping elem gets
+				{release,Pid} ->
+					if
+						(Queue /= []) ->
+							[H|T] = Queue,
+							H ! {reply,self()},
+							new_node(Groupmembers, {State, true}, T);
+						(Queue == []) ->
+							new_node(Groupmembers, {State, false}, Queue)
+					end,
+					nothing;
 				_ ->
 					%io:format("~p: ignoring ~p~n",[self(),Msg])
 					nothing
 		end
     	end,
-	new_node(Groupmembers).
+	new_node(Groupmembers, {State, Voted}, Queue).
 
 
-aquire_mutex(Groupmembers) ->
+aquire_mutex(Groupmembers, {_State, Voted}) ->
     io:format("~p: Mutex: Waiting is over~n", [self()]),
-    %nothing.
-    %State = wanted,
     lists:foreach(fun(Elem) -> Elem ! {request,self()} end,[X || X<-Groupmembers, X=/=self()]),
     getreplies([X || X<-Groupmembers, X=/=self()]),
-    held.
+    {held,Voted}.
+
+release_mutex(Groupmembers, {State, Voted}) ->
+    io:format("~p: Mutex: Releasing~n", [self()]),
+    lists:foreach(fun(Elem) -> Elem ! {release,self()} end,[X || X<-Groupmembers, X=/=self()]),
+    {State,Voted}.
 
 getreplies([]) -> 
 	[],
