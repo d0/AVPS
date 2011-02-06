@@ -1,6 +1,6 @@
 %%2011 Dominik Oepen, Jan Birkholz
 -module(paxos).
--export([start_proposer/3, start_acceptor/1, start_learner/1, test1/0,testa/0, testb/0]).
+-export([start_proposer/3, start_acceptor/1, start_learner/1, test1/0,testa/0, testb/0,testc/0,testd/0]).
 
 %%%%%%%%%%%%%%%%% Proposer %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -102,35 +102,41 @@ learner(Num_accepted, R_lcl, V_lcl, Maj) ->
 
 	if 
 		(Num_accepted >= Maj) ->
-			io:format("Value accepted: ~w~n", [R_lcl]);
+			io:format("Value accepted: ~w~n", [R_lcl]),
+			%TODO: implem. receive
 		(Num_accepted < Maj) ->
-			io:format("Value not accepted: ~p~n",[R_lcl])
-	end,
-
-	io:format("Learner is waiting for accepted msg~n"),
-
-	receive
-		Msg ->
-			case Msg of
-				{accepted, R, Value} ->
-					io:format("Learner received accepted msg:~p:~p~n",[R,Value]),
+			io:format("Value not accepted: ~p~n",[R_lcl]),
+			receive
+				Msg ->
+					case Msg of
+						{accepted, R, Value} ->
+							io:format("Learner received accepted msg:~p:~p~n",[R,Value]),
+							if
+								(R > R_lcl) ->
+									io:format("New value"),
+									learner(1, R, Value, Maj);
+								(R =< R_lcl) ->
+									learner(Num_accepted + 1, R_lcl, Value, Maj)
+							end; 
+						%                casei R > R_lcl of
+						%                    true ->
+						%                        learner(1, R, Value, Maj);
+						%                    false -> %Must be R_lcl == R and V_lcl == Value
+						%                        learner(Num_accepted + 1, R_lcl, Value, Maj)
+						%                end;
+						_ ->
+							io:format("WTF?~n")
+					end
+			after 2000->
 					if
-						(R > R_lcl) ->
-							io:format("New value"),
-							learner(1, R, Value, Maj);
-						(R =< R_lcl) ->
-							learner(Num_accepted + 1, R_lcl, Value, Maj)
-					end; 
-				%                casei R > R_lcl of
-				%                    true ->
-				%                        learner(1, R, Value, Maj);
-				%                    false -> %Must be R_lcl == R and V_lcl == Value
-				%                        learner(Num_accepted + 1, R_lcl, Value, Maj)
-				%                end;
-				_ ->
-					io:format("WTF?~n")
+						(Num_accepted < Maj) ->
+							io:format("Learner ~p: No consensus found~n",[self()]);
+						(Num_accepted >= Maj) ->
+							nothing
+					end
 			end
 	end.
+
 
 %%%%%%%%%%%%%%%%% Test cases %%%%%%%%%%%%%%%%%%%%%%%%%%%
 test1() ->
@@ -148,17 +154,40 @@ testa() ->
 	Acceptor1 = spawn(paxos, start_acceptor, [[Learner]]),
 	Acceptor2 = spawn(paxos, start_acceptor, [[Learner]]),
 	Acceptor3 = spawn(paxos, start_acceptor, [[Learner]]),
+	
+	%If Proposers are started with all acceptors, consensus will be found first for the first proposer and then for the second
 	Proposer = spawn(paxos, start_proposer, [23, 1, [Acceptor2]]),
 	Proposer2 = spawn(paxos, start_proposer, [24, 2, [Acceptor1, Acceptor3]]),
 	nothing.
 
 testb() ->
-	%3 acceptors, 1 learner, 1 proposer, no crash
-	Learner = spawn(paxos, start_learner, [3]),
+	%3 acceptors, 1 learner, 1 proposer; majority=2, minority=1
+	Learner = spawn(paxos, start_learner, [2]),
 	Acceptor1 = spawn(paxos, start_acceptor, [[Learner]]),
 	Acceptor2 = spawn(paxos, start_acceptor, [[Learner]]),
 	Acceptor3 = spawn(paxos, start_acceptor, [[Learner]]),
 	Proposer = spawn(paxos, start_proposer, [23, 1, [Acceptor2, Acceptor3]]),
+	nothing.
+
+testc() ->
+	%3 acceptors, 1 learner, 1 proposer; minority=1 - no consensus (Timeout=2s)
+	Learner = spawn(paxos, start_learner, [2]),
+	Acceptor1 = spawn(paxos, start_acceptor, [[Learner]]),
+	Acceptor2 = spawn(paxos, start_acceptor, [[Learner]]),
+	Acceptor3 = spawn(paxos, start_acceptor, [[Learner]]),
+	Proposer = spawn(paxos, start_proposer, [23, 1, [Acceptor1]]),
+	nothing.
+
+testd() ->
+	%3 acceptors, 1 learner, 1 proposer; majority=2, minority=1
+	Learner = spawn(paxos, start_learner, [2]),
+	Acceptor1 = spawn(paxos, start_acceptor, [[Learner]]),
+	Acceptor2 = spawn(paxos, start_acceptor, [[Learner]]),
+	Acceptor3 = spawn(paxos, start_acceptor, [[Learner]]),
+	Proposer = spawn(paxos, start_proposer, [23, 1, [Acceptor2, Acceptor3]]),
+	%2nd proposer with minority just gets back the result from the first maajority proposer
+	%'ask' by minority or lesser round nr
+	Proposer2 = spawn(paxos, start_proposer, [24, 1, [Acceptor1]]),
 	nothing.
 
 %%%%%%%%%%%%%%%%% Utility funs %%%%%%%%%%%%%%%%%%%%%%%%%%%
