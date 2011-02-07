@@ -4,19 +4,20 @@
 
 %%%%%%%%%%%%%%%%% Proposer %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%TODO: Start proposer with a given list of acceptors (and learners?) OR wait for a message including this list
+%Start proposer with a given list of acceptors (and learners?) OR wait for a message including this list: atm given list
 start_proposer(Value,R,Acceptors) ->
 	%Init r=1, r_latest = 0, latest=none, ack_num=0
+	io:format("~p: Proposer(v=~p,r=~p)~n",[self(),Value,R]),
 	propose(Value, R, 0, none, Acceptors).
 
 propose(Value, R, R_latest, Latest, Acceptors) ->
-	io:format("~p: Proposer started~n",[self()]),
 	lists:foreach(fun(Acceptor) -> Acceptor ! {prepare, self(), R} end, Acceptors),
 	proposer_get_acks(Value, R, R_latest, Latest, 0, Acceptors), %ack_num = 0
 	nothing.
 
+%Get acks
 proposer_get_acks(Value, R, R_latest, Latest, Ack_num, Acceptors) -> 
-	io:format("Ack_num: ~w~n", [Ack_num]),
+	%io:format("Ack_num: ~w~n", [Ack_num]),
 	case Ack_num >= length(Acceptors) of
 		true ->
 			case Latest of
@@ -33,10 +34,10 @@ proposer_get_acks(Value, R, R_latest, Latest, Ack_num, Acceptors) ->
 	receive {ack, R_ack, Value_i, R_i} ->
 			case (R == R_ack) of
 				true ->
-					io:format("R_i:~w, R_latest:~w~n", [R_i, R_latest]),
+					%io:format("R_i:~w, R_latest:~w~n", [R_i, R_latest]),
 					case (R_i > R_latest) of
 						true ->
-							io:format("Proposer got ACK~n"),
+							%io:format("Proposer got ACK~n"),
 							proposer_get_acks(Value, R, R_i, Value_i, Ack_num + 1, Acceptors);
 						false ->
 							proposer_get_acks(Value, R, R_latest, Latest, Ack_num + 1, Acceptors)
@@ -46,8 +47,9 @@ proposer_get_acks(Value, R, R_latest, Latest, Ack_num, Acceptors) ->
 			end
 	end.
 
+%Send accepts
 proposer_accept(Value, R, Acceptors) ->
-	io:format("Proposer accept~n"),
+	%io:format("Proposer accept~n"),
 	lists:foreach(fun(Acceptor) -> Acceptor ! {accept, Value, R} end, Acceptors).
 
 %%%%%%%%%%%%%%%%% Acceptor %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -65,11 +67,11 @@ acceptor(R_ack, R_accepted, Value, Learners) ->
 							Pid ! {ack, R, Value, R_accepted},
 							acceptor(R, R_accepted, Value, Learners);
 						false ->
-							%FIXME: Needs NACK or timeout in proposer
+							%NACK here or timeout in proposer: atm timeout
 							acceptor(R_ack, R_accepted, Value, Learners) 
 					end;
 				{accept, R, W} -> %Phase 2
-					io:format("Got accept message~n"),
+					io:format("~p: Acceptor: Got accept message~n",[self()]),
 					case (R > R_ack) and (R > R_accepted) of
 						true ->
 							acceptor_accepted(R, W, Learners),
@@ -80,30 +82,19 @@ acceptor(R_ack, R_accepted, Value, Learners) ->
 			end
 	end.
 
+
 acceptor_accepted(R_accepted, W, Learners) ->
-	%    sleep(1000),
-	io:format("Learners: ~w, R_accepted: ~w~n", [Learners, R_accepted]),
 	lists:foreach(fun(Learner) -> Learner ! {accepted, R_accepted, W} end, Learners).
 
 %%%%%%%%%%%%%%%%% Learner %%%%%%%%%%%%%%%%%%%%%%%%%%%
 start_learner(Maj) ->
 	%Init num_acceptors = 0, R = 0, Value = none
-	learner(0, 0, none, Maj).
+	learner(0, 0, none, Maj,false,0).
 
-learner(Num_accepted, R_lcl, V_lcl, Maj) ->
-	io:format("Learner: Num_accepted=~w Maj=~w~n", [Num_accepted, Maj]),
-
-	%case (Num_accepted == Maj) of
-	%    true ->
-	%       io:format("Value accepted: ~w~n", V_lcl);
-	%    false ->
-	%        nothing
-	%end,
-
+learner(Num_accepted, R_lcl, V_lcl, Maj,Consensus,Result) ->
 	if 
 		(Num_accepted >= Maj) ->
-			io:format("Value accepted: ~w~n", [R_lcl]),
-			%TODO: implem. receive
+			io:format("~p: Learner: Value accepted: ~w~n", [self(),R_lcl]),
 			receive
 				Msg ->
 					case Msg of
@@ -112,48 +103,41 @@ learner(Num_accepted, R_lcl, V_lcl, Maj) ->
 							if
 								(R > R_lcl) ->
 									io:format("New value"),
-									learner(1, R, Value, Maj);
+									learner(1, R, Value, Maj,true,R_lcl);
 								(R =< R_lcl) ->
-									learner(Num_accepted + 1, R_lcl, Value, Maj)
+									learner(Num_accepted + 1, R_lcl, Value, Maj,true,R_lcl)
 							end; 
-						%                casei R > R_lcl of
-						%                    true ->
-						%                        learner(1, R, Value, Maj);
-						%                    false -> %Must be R_lcl == R and V_lcl == Value
-						%                        learner(Num_accepted + 1, R_lcl, Value, Maj)
-						%                end;
-						_ ->
-							io:format("WTF?~n")
+					_ ->
+							%io:format("WTF?~n"),
+							nothing
 					end
 			end,
 			nothing;
 		(Num_accepted < Maj) ->
-			io:format("Value not accepted: ~p~n",[R_lcl]),
+			io:format("~p: Learner: Value not accepted: ~p (~p/~p)~n",[self(),R_lcl,Num_accepted,Maj]),
 			receive
 				Msg ->
 					case Msg of
 						{accepted, R, Value} ->
-							io:format("Learner received accepted msg:~p:~p~n",[R,Value]),
+							%io:format("Learner received accepted msg:~p:~p~n",[R,Value]),
 							if
 								(R > R_lcl) ->
-									io:format("New value"),
-									learner(1, R, Value, Maj);
+									%io:format("New value",[]),
+									learner(1, R, Value, Maj,Consensus,Result);
 								(R =< R_lcl) ->
-									learner(Num_accepted + 1, R_lcl, Value, Maj)
+									learner(Num_accepted + 1, R_lcl, Value, Maj,Consensus,Result)
 							end; 
-						%                casei R > R_lcl of
-						%                    true ->
-						%                        learner(1, R, Value, Maj);
-						%                    false -> %Must be R_lcl == R and V_lcl == Value
-						%                        learner(Num_accepted + 1, R_lcl, Value, Maj)
-						%                end;
-						_ ->
-							io:format("WTF?~n")
+					_ ->
+							%io:format("WTF?~n"),
+							nothing
 					end
 			after 2000->
 					if
-						(Num_accepted < Maj) ->
-							io:format("Learner ~p: No consensus found~n",[self()]);
+						(Num_accepted < Maj) and (Consensus == false) ->
+							io:format("~p: Learner: No consensus found (Timeout)~n",[self()]);
+						(Num_accepted < Maj) and (Consensus == true) ->
+							io:format("~p: Learner: Old Consensus still true: ~p~n",[self(),Result]);
+							nothing;
 						(Num_accepted >= Maj) ->
 							nothing
 					end
